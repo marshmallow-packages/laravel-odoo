@@ -156,7 +156,7 @@ Odoo::partners()->withTimezone('Europe/Amsterdam');
 Odoo::partners()->withContext(['default_customer_rank' => 1]);
 ```
 
-A default context for every call (language, timezone, company) lives in `config('odoo.context')`, fed by `ODOO_LANG`, `ODOO_TIMEZONE` and `ODOO_COMPANY_ID`. A per-call context wins over the defaults.
+A default context for every call (language, timezone, company) lives in `config('odoo.context')`, fed by `ODOO_LANG`, `ODOO_TIMEZONE` and `ODOO_COMPANY_ID`. A per-call context wins over the defaults. On multi-company databases Odoo takes the active company from `allowed_company_ids`, so the default company sets that key as well.
 
 Odoo hides archived records from searches by default. To include them (when matching against historical data, for instance), use `withArchived()`, which turns `active_test` off:
 
@@ -313,7 +313,7 @@ Full documentation lives in the published `config/odoo.php`.
 | `user_agent` | | `marshmallow/laravel-odoo` | `User-Agent` header. |
 | `context.lang` | `ODOO_LANG` | `null` | Default language for every call, e.g. `nl_NL`. |
 | `context.tz` | `ODOO_TIMEZONE` | `null` | Default timezone for every call. |
-| `context.company_id` | `ODOO_COMPANY_ID` | `null` | Default company for every call. |
+| `context.company_id` | `ODOO_COMPANY_ID` | `null` | Default company for every call. Also fills `allowed_company_ids`, which is where Odoo reads the active company from. |
 | `resources` | | `[]` | Custom resource classes, see Extending. |
 
 ## Artisan commands

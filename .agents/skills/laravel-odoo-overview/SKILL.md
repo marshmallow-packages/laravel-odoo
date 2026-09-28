@@ -20,7 +20,7 @@ description: Orient in the marshmallow/laravel-odoo repo - what it is, how the p
 - **`workbench/`** - throwaway host app for `composer build` / `composer serve`. Never ship behavior that only works because of workbench wiring.
 - **`resources/boost/skills/laravel-odoo-development/SKILL.md`** - the Boost skill shipped to consumers. Regenerate with `package-generate-skill` whenever public APIs, config, commands, tags or README promises change.
 - **`.agents/`** - agent config, with `.claude` and `CLAUDE.md` symlinked to `.agents` and `AGENTS.md`. Local skills: `package-scaffold`, `package-testing`, `package-release`, `package-compatibility`, `package-generate-skill`.
-- **CI** - `.github/workflows/tests.yml` runs the matrix; `update-changelog.yml` maintains `CHANGELOG.md`.
+- **CI** - `.github/workflows/tests.yml` runs the matrix on pushes to `main` and PRs into `main`; the `ci` job is the single required check. `main` is protected by a ruleset: changes land through a PR only, no force pushes, no bypass. `CHANGELOG.md` is written by hand in the PR that precedes a release; nothing commits to `main` after a tag.
 
 ## Invariants (do not violate)
 

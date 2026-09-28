@@ -61,7 +61,8 @@ return [
     |
     | Merged into the context of every call. Unset keys are dropped, and a
     | context passed per call (or via withContext()) wins over these defaults.
-    | Use allowed_company_ids for multi-company setups.
+    | Odoo takes the active company from allowed_company_ids, so a default
+    | company sets both keys; widen allowed_company_ids for multi-company work.
     |
     */
 
@@ -69,6 +70,7 @@ return [
         'lang' => env('ODOO_LANG'),
         'tz' => env('ODOO_TIMEZONE'),
         'company_id' => env('ODOO_COMPANY_ID') !== null ? (int) env('ODOO_COMPANY_ID') : null,
+        'allowed_company_ids' => env('ODOO_COMPANY_ID') !== null ? [(int) env('ODOO_COMPANY_ID')] : null,
     ],
 
     /*

@@ -69,7 +69,7 @@
             "vendor/bin/phpstan analyse --memory-limit=1G"
         ],
         "test:types": [
-            "@php -d memory_limit=1G vendor/bin/pest --type-coverage --min=100"
+            "@php -d memory_limit=1G vendor/bin/pest --type-coverage --min=100 --no-cache"
         ],
         "test:unit": [
             "vendor/bin/pest --parallel"

@@ -14,23 +14,23 @@ Prepare a safe package release checklist and implementation without tagging, pus
 
 ## Workflow
 
-1. Review `CHANGELOG.md`, generated release notes config, GitHub release workflows, open diff, and pending package changes.
-2. Validate the release state with `composer test` before recommending a release.
-3. Confirm whether version metadata needs to change; many Laravel packages rely on Git tags rather than a hardcoded package version.
-4. Review tag naming, release branch, and GitHub release workflow behavior before any release command.
-5. Do not tag, push, or publish without explicit user approval.
+1. Review `CHANGELOG.md`, generated release notes config, open diff, and pending package changes.
+2. Move the `Unreleased` entries in `CHANGELOG.md` under a new version heading with today's date, in the PR that precedes the release. `main` is protected, so nothing can commit the changelog after tagging.
+3. Validate the release state with `composer test` before recommending a release.
+4. Confirm whether version metadata needs to change; many Laravel packages rely on Git tags rather than a hardcoded package version.
+5. After the PR is merged, create the GitHub release from `main` with generated notes (`gh release create vX.Y.Z --target main --generate-notes`); the `.github/release.yml` categories come from PR labels.
+6. Do not tag, push, or publish without explicit user approval.
 
 ## References
 
 - `CHANGELOG.md`
 - `.github/release.yml`
-- `.github/workflows/update-changelog.yml`
 - `.github/workflows/tests.yml`
 - `composer.json`
 
 ## Examples
 
-- Prepare a release by checking changelog coverage, confirming generated release notes categories, running `composer test`, and drafting the tag command for user approval.
+- Prepare a release by moving the changelog entries under the version heading in the release PR, confirming generated release notes categories, running `composer test`, and drafting the release command for user approval.
 - Update release notes grouping in `.github/release.yml` when a new label convention is added.
 
 ## Anti-Patterns

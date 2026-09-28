@@ -121,6 +121,15 @@ it('merges the configured default context under the per-call context', function 
     Http::assertSent(fn (Request $request): bool => $request['context'] === ['lang' => 'en_US', 'tz' => 'Europe/Amsterdam']);
 });
 
+it('sets the allowed companies from the default company id', function () {
+    config()->set('odoo.context', ['lang' => null, 'tz' => null, 'company_id' => 2, 'allowed_company_ids' => [2]]);
+    Http::fake(['odoo.test/*' => Http::response([])]);
+
+    app(Client::class)->call('res.partner', 'search', ['domain' => []]);
+
+    Http::assertSent(fn (Request $request): bool => $request['context'] === ['company_id' => 2, 'allowed_company_ids' => [2]]);
+});
+
 it('sends no context when none is configured', function () {
     config()->set('odoo.context', ['lang' => null, 'tz' => null, 'company_id' => null]);
     Http::fake(['odoo.test/*' => Http::response([])]);
