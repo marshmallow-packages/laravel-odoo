@@ -7,7 +7,7 @@
 ### Fixed
 
 - `ODOO_COMPANY_ID` also fills `allowed_company_ids`, which is where Odoo reads the active company from on multi-company databases.
-- Type coverage runs without the plugin cache, which removes the ParseError flake on prefer-lowest CI jobs.
+- Type coverage runs single-worker in CI, which removes the cache-file ParseError flake on prefer-lowest jobs.
 
 ### Changed
 

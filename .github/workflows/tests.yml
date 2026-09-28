@@ -59,6 +59,12 @@ jobs:
         run: composer lint:check
 
       - name: Type Coverage
+        # pest-plugin-type-coverage 4.x forks workers that write one shared
+        # cache file without a lock, which corrupts it (ParseError in
+        # .temp/v3.php). A huge per-process memory budget makes pokio use a
+        # single worker; only 5.0.2+ has the lock and that needs PHP 8.4.
+        env:
+          FORK_MEM_PER_PROC: 1000000000000
         run: composer test:types
 
       - name: Test Suite
