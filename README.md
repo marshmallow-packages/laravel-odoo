@@ -121,6 +121,16 @@ $dutch = Odoo::products()->withContext(['lang' => 'nl_NL']);
 $dutch->find($id, ['name', 'description_sale']);
 ```
 
+Odoo hides archived records from searches by default. To include them (when matching against historical data, for instance), disable `active_test` in the context and page through the results:
+
+```php
+$partners = Odoo::partners()->withContext(['active_test' => false]);
+
+for ($offset = 0; $batch = $partners->searchRead([], ['id', 'email', 'ref', 'active'], limit: 500, offset: $offset, order: 'id asc'); $offset += 500) {
+    // ...
+}
+```
+
 Field names differ per Odoo version and per installed app. When in doubt, ask the instance instead of guessing:
 
 ```php
