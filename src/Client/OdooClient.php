@@ -30,6 +30,11 @@ class OdooClient implements Client
     public function call(string $model, string $method, array $params = [], array $ids = []): mixed
     {
         $body = $params;
+        $context = $this->defaultContext();
+
+        if ($context !== []) {
+            $body['context'] = array_merge($context, (array) ($body['context'] ?? []));
+        }
 
         if ($ids !== []) {
             $body['ids'] = array_values($ids);
@@ -61,6 +66,18 @@ class OdooClient implements Client
     public function enabled(): bool
     {
         return (bool) ($this->config['enabled'] ?? true);
+    }
+
+    /**
+     * The configured default context (odoo.context) without unset keys.
+     *
+     * @return array<string, mixed>
+     */
+    private function defaultContext(): array
+    {
+        $context = $this->config['context'] ?? [];
+
+        return array_filter(is_array($context) ? $context : [], static fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
     /**
