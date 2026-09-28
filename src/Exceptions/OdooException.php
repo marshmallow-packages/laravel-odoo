@@ -84,9 +84,10 @@ class OdooException extends RuntimeException
             in_array($short, ['AccessError', 'Forbidden'], true) => AccessDeniedException::class,
             in_array($short, ['ValidationError', 'UserError'], true) => ValidationException::class,
             $short === 'MissingError' => MissingRecordException::class,
+            $short === 'NotFound', str_starts_with((string) $name, 'builtins.') => InvalidRequestException::class,
             $status === 401 => AuthenticationException::class,
             $status === 403 => AccessDeniedException::class,
-            $status === 404 => MissingRecordException::class,
+            $status === 404 => InvalidRequestException::class,
             default => ServerException::class,
         };
     }

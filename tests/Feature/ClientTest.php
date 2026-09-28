@@ -9,6 +9,7 @@ use Marshmallow\Odoo\Exceptions\AccessDeniedException;
 use Marshmallow\Odoo\Exceptions\AuthenticationException;
 use Marshmallow\Odoo\Exceptions\ConnectionException;
 use Marshmallow\Odoo\Exceptions\InvalidConfigurationException;
+use Marshmallow\Odoo\Exceptions\InvalidRequestException;
 use Marshmallow\Odoo\Exceptions\MissingRecordException;
 use Marshmallow\Odoo\Exceptions\OdooDisabledException;
 use Marshmallow\Odoo\Exceptions\ServerException;
@@ -41,9 +42,11 @@ it('sends an empty json object when there are no params', function () {
 });
 
 it('reads the server version', function () {
-    Http::fake(['odoo.test/web/version' => Http::response(['server_version' => '19.0'])]);
+    Http::fake(['odoo.test/web/version' => Http::response(['version' => '19.0+e', 'version_info' => [19, 0, 0, 'final', 0, 'e']])]);
 
-    expect(app(Client::class)->version())->toBe(['server_version' => '19.0']);
+    expect(app(Client::class)->version())->toBe(['version' => '19.0+e', 'version_info' => [19, 0, 0, 'final', 0, 'e']]);
+    expect(app(Client::class)->versionLabel())->toBe('19.0+e');
+    expect(app(Client::class)->majorVersion())->toBe(19);
 
     Http::assertSent(fn (Request $request): bool => $request->method() === 'GET');
 });
@@ -74,7 +77,9 @@ it('maps odoo errors onto typed exceptions', function (string $name, int $status
     'validation' => ['odoo.exceptions.ValidationError', 422, ValidationException::class],
     'user error' => ['odoo.exceptions.UserError', 422, ValidationException::class],
     'missing' => ['odoo.exceptions.MissingError', 404, MissingRecordException::class],
-    'other' => ['builtins.TypeError', 500, ServerException::class],
+    'unknown model or method' => ['werkzeug.exceptions.NotFound', 404, InvalidRequestException::class],
+    'invalid field in domain' => ['builtins.ValueError', 500, InvalidRequestException::class],
+    'other' => ['odoo.exceptions.RedirectWarning', 500, ServerException::class],
 ]);
 
 it('falls back to the http status when the error body is not json', function () {
@@ -92,11 +97,16 @@ it('falls back to the http status when the error body is not json', function () 
     $this->fail('No exception thrown.');
 });
 
-it('maps 401 without a body to an authentication exception', function () {
-    Http::fake(['odoo.test/*' => Http::response('', 401)]);
+it('maps bodiless responses to the right class', function (int $status, string $class) {
+    Http::fake(['odoo.test/*' => Http::response('', $status)]);
 
-    app(Client::class)->call('res.partner', 'read', [], [1]);
-})->throws(AuthenticationException::class);
+    expect(fn () => app(Client::class)->call('res.partner', 'read', [], [1]))->toThrow($class);
+})->with([
+    [401, AuthenticationException::class],
+    [403, AccessDeniedException::class],
+    [404, InvalidRequestException::class],
+    [500, ServerException::class],
+]);
 
 it('retries connection failures and server errors but not client errors', function () {
     config()->set('odoo.retry.times', 3);
@@ -109,13 +119,17 @@ it('retries connection failures and server errors but not client errors', functi
         'odoo.test/json/2/c/d' => Http::sequence()
             ->push(['name' => 'odoo.exceptions.ValidationError', 'message' => 'Bad'], 422)
             ->push(['ok' => true]),
+        'odoo.test/json/2/e/f' => Http::sequence()
+            ->push(['name' => 'builtins.ValueError', 'message' => 'Invalid field'], 500)
+            ->push(['ok' => true]),
     ]);
 
     expect(app(Client::class)->call('a', 'b'))->toBe(['ok' => true]);
 
     expect(fn () => app(Client::class)->call('c', 'd'))->toThrow(ValidationException::class);
+    expect(fn () => app(Client::class)->call('e', 'f'))->toThrow(InvalidRequestException::class);
 
-    Http::assertSentCount(4);
+    Http::assertSentCount(5);
 });
 
 it('wraps transport failures in the package connection exception', function () {

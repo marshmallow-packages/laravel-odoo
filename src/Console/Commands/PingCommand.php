@@ -17,7 +17,7 @@ class PingCommand extends Command
     public function handle(Odoo $odoo): int
     {
         try {
-            $version = $odoo->api()->version();
+            $version = $odoo->api()->versionLabel();
             $context = $odoo->api()->contextGet();
 
             $uid = (int) ($context['uid'] ?? 0);
@@ -30,7 +30,7 @@ class PingCommand extends Command
             return self::FAILURE;
         }
 
-        $this->components->twoColumnDetail('Server version', (string) ($version['server_version'] ?? 'unknown'));
+        $this->components->twoColumnDetail('Server version', $version);
         $this->components->twoColumnDetail('User', sprintf('%s (%s, uid %d)', $user['name'] ?? 'unknown', $user['login'] ?? '-', $uid));
         $this->components->twoColumnDetail('Language', (string) ($context['lang'] ?? '-'));
         $this->components->twoColumnDetail('Timezone', (string) ($context['tz'] ?? '-'));

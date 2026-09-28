@@ -6,6 +6,7 @@ namespace Marshmallow\Odoo\Testing;
 
 use Closure;
 use Marshmallow\Odoo\Contracts\Client;
+use Marshmallow\Odoo\Support\Version;
 use RuntimeException;
 
 /**
@@ -58,11 +59,19 @@ class FakeClient implements Client
     public function version(): array
     {
         return (array) ($this->responses['web/version'] ?? [
-            'server_version' => '19.0',
-            'server_version_info' => [19, 0, 0, 'final', 0, ''],
-            'server_serie' => '19.0',
-            'protocol_version' => 1,
+            'version' => '19.0',
+            'version_info' => [19, 0, 0, 'final', 0, ''],
         ]);
+    }
+
+    public function versionLabel(): string
+    {
+        return Version::label($this->version());
+    }
+
+    public function majorVersion(): int
+    {
+        return Version::major($this->version());
     }
 
     public function contextGet(): array

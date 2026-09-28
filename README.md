@@ -198,12 +198,14 @@ Also available: `whereNotIn()`, `whereNull()`, `whereLike()`, `whereDomain()` an
 
 ```php
 Odoo::api()->call('res.partner', 'search_read', ['domain' => [], 'fields' => ['name'], 'limit' => 10]);
-Odoo::api()->version();     // GET /web/version
+Odoo::api()->version();     // GET /web/version, raw payload
+Odoo::api()->versionLabel(); // "19.0+e"
+Odoo::api()->majorVersion(); // 19
 Odoo::api()->contextGet();  // uid, lang, tz of the API key user
 Odoo::enabled();            // config('odoo.enabled')
 ```
 
-Every request carries the bearer key, a `User-Agent`, and `X-Odoo-Database` when configured. Connection failures and 5xx responses are retried (`odoo.retry`); 4xx responses never are, because every JSON-2 call is its own transaction and a validation error will not fix itself.
+Every request carries the bearer key, a `User-Agent`, and `X-Odoo-Database` when configured. Connection failures and 5xx responses without an Odoo error body (a 502/503 from the proxy) are retried (`odoo.retry`). Anything Odoo itself answered, including a 500 with an error name such as `builtins.ValueError`, is deterministic and never retried: every JSON-2 call is its own transaction and the same request will fail the same way.
 
 ## Errors
 
@@ -214,7 +216,8 @@ All exceptions extend `Marshmallow\Odoo\Exceptions\OdooException`. The subclass 
 | `AuthenticationException` | Invalid or missing API key (`werkzeug.exceptions.Unauthorized`, `odoo.exceptions.AccessDenied`, HTTP 401) |
 | `AccessDeniedException` | The key's user lacks access rights (`odoo.exceptions.AccessError`, HTTP 403) |
 | `ValidationException` | Odoo rejected the values (`ValidationError`, `UserError`) |
-| `MissingRecordException` | The record does not exist (`MissingError`, HTTP 404, or `find()` on an empty result) |
+| `MissingRecordException` | The record does not exist (`MissingError`, or `find()` on an empty `read`; Odoo returns `[]` for unknown ids rather than an error) |
+| `InvalidRequestException` | The request is wrong: unknown model or method (`werkzeug.exceptions.NotFound`), invalid field or value in a domain (`builtins.ValueError` and friends) |
 | `ServerException` | Any other non-2xx response |
 | `ConnectionException` | The instance could not be reached within the timeout and retries |
 | `OdooDisabledException` | `ODOO_ENABLED=false` |
@@ -246,7 +249,7 @@ Full documentation lives in the published `config/odoo.php`.
 | `database` | `ODOO_DATABASE` | `null` | Sent as `X-Odoo-Database`; only for multi-database hosts. |
 | `api_key` | `ODOO_API_KEY` | `null` | API key of the integration user. |
 | `timeout` | `ODOO_TIMEOUT` | `30` | Seconds per request. |
-| `retry.times` | | `3` | Attempts for connection failures and 5xx responses. |
+| `retry.times` | | `3` | Attempts for connection failures and 5xx responses without an Odoo error body. |
 | `retry.sleep` | | `250` | Milliseconds between attempts. |
 | `user_agent` | | `marshmallow/laravel-odoo` | `User-Agent` header. |
 | `resources` | | `[]` | Custom resource classes, see Extending. |
@@ -289,7 +292,7 @@ $odoo->respond('res.partner', 'read', fn (RecordedCall $call): array => array_ma
 ));
 ```
 
-A call without a scripted response throws, so a test cannot silently pass on an empty answer. `version()` and `contextGet()` have defaults (Odoo 19, uid 1) and can be overridden under the keys `web/version` and `res.users/context_get`.
+A call without a scripted response throws, so a test cannot silently pass on an empty answer. `version()` and `contextGet()` have defaults (Odoo 19, uid 1) and can be overridden under the keys `web/version` (`version`, `version_info`) and `res.users/context_get`.
 
 Prefer `Http::fake()` when you want to test the wire format itself. URLs follow `{ODOO_URL}/json/2/{model}/{method}`:
 

@@ -25,18 +25,21 @@ it('answers from scripted responses and closures', function () {
 
     expect(Odoo::partners()->search())->toBe([1]);
     expect(Odoo::partners()->get([3, 4]))->toBe([['id' => 3], ['id' => 4]]);
-    expect(Odoo::api()->version()['server_version'])->toBe('19.0');
+    expect(Odoo::api()->version()['version'])->toBe('19.0');
+    expect(Odoo::api()->versionLabel())->toBe('19.0');
+    expect(Odoo::api()->majorVersion())->toBe(19);
     expect(Odoo::api()->contextGet()['uid'])->toBe(1);
     expect(Odoo::enabled())->toBeTrue();
 });
 
 it('lets tests override version and context', function () {
     Odoo::fake([
-        'web/version' => ['server_version' => '18.0', 'server_version_info' => [18, 0, 0, 'final', 0, '']],
+        'web/version' => ['version' => '18.0', 'version_info' => [18, 0, 0, 'final', 0, '']],
         'res.users/context_get' => ['uid' => 42],
     ]);
 
-    expect(Odoo::api()->version()['server_version'])->toBe('18.0');
+    expect(Odoo::api()->versionLabel())->toBe('18.0');
+    expect(Odoo::api()->majorVersion())->toBe(18);
     expect(Odoo::api()->contextGet())->toBe(['uid' => 42]);
 });
 

@@ -14,6 +14,7 @@ use Marshmallow\Odoo\Exceptions\ConnectionException;
 use Marshmallow\Odoo\Exceptions\InvalidConfigurationException;
 use Marshmallow\Odoo\Exceptions\OdooDisabledException;
 use Marshmallow\Odoo\Exceptions\OdooException;
+use Marshmallow\Odoo\Support\Version;
 use Throwable;
 
 class OdooClient implements Client
@@ -40,6 +41,16 @@ class OdooClient implements Client
     public function version(): array
     {
         return (array) $this->send('get', 'web/version')->json();
+    }
+
+    public function versionLabel(): string
+    {
+        return Version::label($this->version());
+    }
+
+    public function majorVersion(): int
+    {
+        return Version::major($this->version());
     }
 
     public function contextGet(): array
@@ -121,6 +132,17 @@ class OdooClient implements Client
             return true;
         }
 
-        return $exception instanceof RequestException && $exception->response->serverError();
+        if (! $exception instanceof RequestException) {
+            return false;
+        }
+
+        if (! $exception->response->serverError()) {
+            return false;
+        }
+
+        // A 5xx carrying an Odoo error body (builtins.ValueError for a bad
+        // domain, for instance) is deterministic; only proxy-level 502/503
+        // without one are worth another attempt.
+        return ! is_string($exception->response->json('name'));
     }
 }

@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\ServiceProvider;
 use Marshmallow\Odoo\Client\OdooClient;
 use Marshmallow\Odoo\Contracts\Client;
 use Marshmallow\Odoo\Facades\Odoo as OdooFacade;
 use Marshmallow\Odoo\Odoo;
+use Marshmallow\Odoo\OdooServiceProvider;
 use Marshmallow\Odoo\Resources\Partners;
 use Marshmallow\Odoo\Resources\Resource;
 
@@ -30,14 +31,12 @@ it('merges the package config', function () {
 });
 
 it('publishes the config under the odoo-config tag', function () {
-    $target = config_path('odoo.php');
-    File::delete($target);
+    $paths = ServiceProvider::pathsToPublish(OdooServiceProvider::class, 'odoo-config');
 
-    $this->artisan('vendor:publish', ['--tag' => 'odoo-config'])->assertSuccessful();
-
-    expect(File::exists($target))->toBeTrue();
-
-    File::delete($target);
+    expect($paths)->toHaveCount(1);
+    expect(realpath((string) array_key_first($paths)))->toBe(realpath(__DIR__.'/../../config/odoo.php'));
+    expect(reset($paths))->toBe(config_path('odoo.php'));
+    expect(ServiceProvider::pathsToPublish(OdooServiceProvider::class, 'odoo'))->toBe($paths);
 });
 
 it('registers the artisan commands', function () {

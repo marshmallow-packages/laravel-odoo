@@ -9,6 +9,7 @@ use Marshmallow\Odoo\Exceptions\AuthenticationException;
 use Marshmallow\Odoo\Exceptions\ConnectionException;
 use Marshmallow\Odoo\Exceptions\OdooException;
 use Marshmallow\Odoo\Odoo;
+use Marshmallow\Odoo\Support\Version;
 
 class DoctorCommand extends Command
 {
@@ -88,9 +89,8 @@ class DoctorCommand extends Command
 
         $this->pass('Reachable', 'yes');
 
-        $info = $version['server_version_info'] ?? [];
-        $major = is_array($info) ? (int) ($info[0] ?? 0) : 0;
-        $label = (string) ($version['server_version'] ?? 'unknown');
+        $major = Version::major($version);
+        $label = Version::label($version);
 
         if ($major < self::MINIMUM_VERSION) {
             $this->problem('Version', "{$label}, the JSON-2 API needs Odoo ".self::MINIMUM_VERSION.'+');

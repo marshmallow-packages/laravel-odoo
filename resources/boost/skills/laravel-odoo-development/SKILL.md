@@ -68,7 +68,7 @@ Resource methods: `find`, `get`, `exists`, `search`, `searchRead`, `first`, `sea
 
 ### 4. Handle errors
 
-Catch `Marshmallow\Odoo\Exceptions\OdooException` or a subclass: `AuthenticationException`, `AccessDeniedException`, `ValidationException`, `MissingRecordException`, `ServerException`, `ConnectionException`, `OdooDisabledException`, `InvalidConfigurationException`. Each keeps `payload`, `response`, `odooName()`, `arguments()`, `debug()`.
+Catch `Marshmallow\Odoo\Exceptions\OdooException` or a subclass: `AuthenticationException`, `AccessDeniedException`, `ValidationException`, `MissingRecordException`, `InvalidRequestException` (unknown model/method/field, fix the code), `ServerException`, `ConnectionException`, `OdooDisabledException`, `InvalidConfigurationException`. Each keeps `payload`, `response`, `odooName()`, `arguments()`, `debug()`.
 
 Every JSON-2 call is its own transaction. Store remote ids immediately after `create()` and make follow-up calls (like `post()`) idempotent and retryable.
 

@@ -47,7 +47,7 @@ it('reports an unreachable instance', function () {
 });
 
 it('reports an unsupported version', function () {
-    Odoo::fake(['web/version' => ['server_version' => '17.0', 'server_version_info' => [17, 0, 0, 'final', 0, '']]]);
+    Odoo::fake(['web/version' => ['version' => '17.0', 'version_info' => [17, 0, 0, 'final', 0, '']]]);
 
     $this->artisan('odoo:doctor')
         ->expectsOutputToContain('17.0, the JSON-2 API needs Odoo 19+')
@@ -56,7 +56,7 @@ it('reports an unsupported version', function () {
 
 it('reports a rejected api key', function () {
     Http::fake([
-        'odoo.test/web/version' => Http::response(['server_version' => '19.0', 'server_version_info' => [19, 0, 0, 'final', 0, '']]),
+        'odoo.test/web/version' => Http::response(['version' => '19.0+e', 'version_info' => [19, 0, 0, 'final', 0, 'e']]),
         'odoo.test/json/2/*' => Http::response(['name' => 'werkzeug.exceptions.Unauthorized', 'message' => 'Invalid apikey'], 401),
     ]);
 

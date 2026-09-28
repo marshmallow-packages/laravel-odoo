@@ -15,11 +15,21 @@ interface Client
     public function call(string $model, string $method, array $params = [], array $ids = []): mixed;
 
     /**
-     * The server version info from /web/version.
+     * The raw /web/version payload (version, version_info, ...).
      *
      * @return array<string, mixed>
      */
     public function version(): array;
+
+    /**
+     * The server version label, e.g. "19.0+e".
+     */
+    public function versionLabel(): string;
+
+    /**
+     * The server major version, e.g. 19, or 0 when unknown.
+     */
+    public function majorVersion(): int;
 
     /**
      * The context of the user behind the API key (uid, lang, tz).
