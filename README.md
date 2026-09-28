@@ -132,11 +132,14 @@ Odoo::partners()->fields(['type', 'string', 'required']);
 Creating and confirming an invoice are two transactions in Odoo. Store the id right after `create()`, then post it; if posting fails the invoice still exists as a draft and the call can be retried.
 
 ```php
+use Marshmallow\Odoo\Resources\Invoices;
+use Marshmallow\Odoo\Support\Commands;
+
 $invoiceId = Odoo::invoices()->create([
     'move_type' => 'out_invoice',
     'partner_id' => $partnerId,
     'invoice_line_ids' => [
-        [0, 0, ['product_id' => $productId, 'quantity' => 2, 'price_unit' => 19.95]],
+        Commands::create(['product_id' => $productId, 'quantity' => 2, 'price_unit' => 19.95, 'tax_ids' => Commands::set([$taxId])]),
     ],
 ]);
 
@@ -148,6 +151,24 @@ $open = Odoo::invoices()->searchRead(
     Invoices::customerInvoices()->where('payment_state', 'not_paid'),
     ['name', 'amount_residual'],
 );
+```
+
+### Relations
+
+One2many and many2many values are written with Odoo's command tuples. `Marshmallow\Odoo\Support\Commands` builds them:
+
+| Helper | Command | Effect |
+| --- | --- | --- |
+| `Commands::create($values)` | `[0, 0, vals]` | Create a related record |
+| `Commands::update($id, $values)` | `[1, id, vals]` | Update a related record |
+| `Commands::delete($id)` | `[2, id]` | Unlink and delete |
+| `Commands::unlink($id)` | `[3, id]` | Unlink, keep the record |
+| `Commands::link($id)` | `[4, id]` | Link an existing record |
+| `Commands::clear()` | `[5]` | Unlink all |
+| `Commands::set($ids)` | `[6, 0, ids]` | Replace all links |
+
+```php
+Odoo::products()->update($productId, ['taxes_id' => Commands::set([$taxId])]);
 ```
 
 ### Domains

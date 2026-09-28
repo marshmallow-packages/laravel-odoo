@@ -49,6 +49,7 @@ Config keys in `config/odoo.php`: `enabled`, `url`, `database`, `api_key`, `time
 
 ```php
 use Marshmallow\Odoo\Facades\Odoo;
+use Marshmallow\Odoo\Support\Commands;
 use Marshmallow\Odoo\Support\Domain;
 
 $rows = Odoo::partners()->searchRead(Domain::make()->where('is_company', true), ['name', 'email'], limit: 50);
@@ -58,6 +59,7 @@ $partner = Odoo::partners()->find($id, ['name']);   // MissingRecordException wh
 Odoo::invoices()->post($invoiceId);                  // action_post, a separate transaction from create()
 Odoo::model('crm.lead')->call('name_search', ['name' => 'acme']);
 Odoo::products()->withContext(['lang' => 'nl_NL'])->get($ids, ['name']);
+Odoo::products()->update($id, ['taxes_id' => Commands::set([$taxId])]);   // x2many: Commands::create/update/delete/unlink/link/clear/set
 ```
 
 Accessors: `partners()` (res.partner), `products()` (product.product), `templates()` (product.template), `invoices()` (account.move), `taxes()` (account.tax), `modules()` (ir.module.module), `model('any.model')`, `api()` (raw client: `call`, `version`, `contextGet`).
