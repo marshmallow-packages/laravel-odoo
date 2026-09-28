@@ -7,7 +7,7 @@
         "marshmallow",
         "laravel-odoo"
     ],
-    "homepage": "https://github.com/marshmallow/laravel-odoo",
+    "homepage": "https://github.com/marshmallow-packages/laravel-odoo",
     "license": "MIT",
     "authors": [
         {
