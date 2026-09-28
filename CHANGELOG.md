@@ -2,7 +2,7 @@
 
 ## [Unreleased](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.1.0...HEAD)
 
-## [v0.1.0](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.1.0...v0.1.0) - 2026-09-28
+## [v0.1.0](https://github.com/marshmallow-packages/laravel-odoo/releases/tag/v0.1.0) - 2026-09-28
 
 Initial pre-release: a generic client for the Odoo 19+ External JSON-2 API.
 

@@ -75,10 +75,9 @@ class OdooClient implements Client
         $request = $this->request();
 
         try {
-            // Odoo expects a JSON object, so an empty body must encode as {} and not [].
             $response = $method === 'get'
                 ? $request->get($path)
-                : $request->post($path, (object) $body);
+                : $request->post($path, new JsonBody($body));
         } catch (HttpConnectionException $exception) {
             throw new ConnectionException($exception->getMessage(), previous: $exception);
         }
