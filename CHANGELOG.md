@@ -2,6 +2,10 @@
 
 ## [Unreleased](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.2.0...HEAD)
 
+## [v0.2.0](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.1.0...v0.2.0) - 2026-09-28
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
 ### Added
 
 - Resource paging: `collect()`, `chunk()` and `lazy()`, ordered by id unless an order is given.
@@ -14,9 +18,6 @@
 
 - 4xx responses without a recognised Odoo error name (such as 422) now map to `InvalidRequestException` instead of `ServerException`.
 
-## [v0.2.0](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.1.0...v0.2.0) - 2026-09-28
-
-<!-- Release notes generated using configuration in .github/release.yml at main -->
 ### What's Changed
 
 #### Enhancements
