@@ -2,6 +2,18 @@
 
 ## [Unreleased](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.1.0...HEAD)
 
+### Added
+
+- Resource paging: `collect()`, `chunk()` and `lazy()`, ordered by id unless an order is given.
+- `readGroup()` over `formatted_read_group`, `nameSearch()`, `displayNames()`, `hasAccess()`, `archive()` and `unarchive()`.
+- `loadNames: false` on `find()` and `get()` to receive plain many2one ids.
+- Context shortcuts `withLang()`, `withTimezone()`, `withCompany()` and `withArchived()`, plus a default context in `config('odoo.context')` (`ODOO_LANG`, `ODOO_TIMEZONE`, `ODOO_COMPANY_ID`).
+- Domain builder: closure nesting in `where()` and `orWhere()`, `whereNot()`, `whereBetween()`, `whereNotBetween()`, `whereChildOf()` and `whereParentOf()`.
+
+### Fixed
+
+- 4xx responses without a recognised Odoo error name (such as 422) now map to `InvalidRequestException` instead of `ServerException`.
+
 ## [v0.1.0](https://github.com/marshmallow-packages/laravel-odoo/releases/tag/v0.1.0) - 2026-09-28
 
 Initial pre-release: a generic client for the Odoo 19+ External JSON-2 API.

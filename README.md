@@ -17,7 +17,7 @@ It is built on Laravel's HTTP client, so `Http::fake()` works, and it ships an `
 
 - PHP 8.3+
 - Laravel 12 or 13
-- Odoo 19+ (Online or on-premise) with an API key
+- Odoo 19 or 20 (Online or on-premise) with an API key. Odoo 18 and older only speak the deprecated XML-RPC and JSON-RPC APIs and are not supported.
 
 ## Installation
 
@@ -91,19 +91,50 @@ All resources share the same methods:
 ```php
 $resource = Odoo::model('crm.lead');
 
-$resource->find(int $id, array $fields = []): array;              // throws MissingRecordException
-$resource->get(array $ids, array $fields = []): array;
+$resource->find(int $id, array $fields = [], bool $loadNames = true): array;   // throws MissingRecordException
+$resource->get(array $ids, array $fields = [], bool $loadNames = true): array;
+$resource->displayNames(array $ids): array;                         // [id => display_name]
 $resource->exists(int $id): bool;
 $resource->search(Domain|array $domain = [], ?int $limit = null, int $offset = 0, ?string $order = null): array; // ids
 $resource->searchRead(Domain|array $domain = [], array $fields = [], ?int $limit = null, int $offset = 0, ?string $order = null): array;
+$resource->collect(Domain|array $domain = [], array $fields = [], ?int $limit = null, int $offset = 0, ?string $order = null): Collection;
 $resource->first(Domain|array $domain = [], array $fields = [], ?string $order = null): ?array;
 $resource->searchCount(Domain|array $domain = []): int;
+$resource->chunk(int $size, Closure $callback, Domain|array $domain = [], array $fields = [], ?string $order = null): bool;
+$resource->lazy(Domain|array $domain = [], array $fields = [], int $chunkSize = 100, ?string $order = null): LazyCollection;
+$resource->readGroup(Domain|array $domain, array $groupBy, array $aggregates = ['__count'], array $having = [], ?int $limit = null, int $offset = 0, ?string $order = null): array;
+$resource->nameSearch(string $name, Domain|array $domain = [], ?int $limit = null, string $operator = 'ilike'): array; // [id => name]
 $resource->create(array $values): int;
 $resource->createMany(array $valuesList): array;                    // ids
 $resource->update(int|array $ids, array $values): bool;             // write
 $resource->delete(int|array $ids): bool;                            // unlink
+$resource->archive(int|array $ids): bool;                           // action_archive
+$resource->unarchive(int|array $ids): bool;                         // action_unarchive
+$resource->hasAccess(string $operation, array $ids = []): bool;     // has_access: read, write, create, unlink
 $resource->fields(array $attributes = []): array;                   // fields_get
 $resource->call(string $method, array $params = [], array $ids = []): mixed;
+```
+
+Many2one fields come back as `[id, display_name]` pairs. Pass `loadNames: false` to `find()` or `get()` to receive plain ids instead.
+
+Large result sets page through `chunk()` (return `false` from the callback to stop) or `lazy()`, both ordered by id unless you pass an order:
+
+```php
+use Marshmallow\Odoo\Resources\Invoices;
+
+Odoo::partners()->chunk(500, function (array $partners, int $page) {
+    // ...
+});
+
+foreach (Odoo::invoices()->lazy(Invoices::customerInvoices(), ['name', 'amount_total']) as $invoice) {
+    // ...
+}
+```
+
+Group and aggregate with `readGroup()` (Odoo's `formatted_read_group`). Group keys accept a granularity such as `invoice_date:month`; aggregates are `field:sum|avg|min|max|count|count_distinct|array_agg` or `__count`:
+
+```php
+Odoo::invoices()->readGroup(Invoices::customerInvoices(), ['partner_id'], ['amount_total:sum', '__count'], order: 'amount_total:sum desc');
 ```
 
 Anything the resource does not cover goes through `call()`, with Odoo's own parameter names:
@@ -113,20 +144,24 @@ Odoo::invoices()->call('action_post', ids: [$invoiceId]);
 Odoo::partners()->call('name_search', ['name' => 'acme', 'limit' => 5]);
 ```
 
-Send a context (language, company, timezone) with every call of a resource:
+Send a context (language, company, timezone) with every call of a resource. The shortcuts return a copy, so keep the result:
 
 ```php
-$dutch = Odoo::products()->withContext(['lang' => 'nl_NL']);
+$dutch = Odoo::products()->withLang('nl_NL');   // withContext(['lang' => 'nl_NL'])
 
 $dutch->find($id, ['name', 'description_sale']);
+
+Odoo::invoices()->withCompany(2)->create([...]);            // company_id + allowed_company_ids
+Odoo::partners()->withTimezone('Europe/Amsterdam');
+Odoo::partners()->withContext(['default_customer_rank' => 1]);
 ```
 
-Odoo hides archived records from searches by default. To include them (when matching against historical data, for instance), disable `active_test` in the context and page through the results:
+A default context for every call (language, timezone, company) lives in `config('odoo.context')`, fed by `ODOO_LANG`, `ODOO_TIMEZONE` and `ODOO_COMPANY_ID`. A per-call context wins over the defaults.
+
+Odoo hides archived records from searches by default. To include them (when matching against historical data, for instance), use `withArchived()`, which turns `active_test` off:
 
 ```php
-$partners = Odoo::partners()->withContext(['active_test' => false]);
-
-for ($offset = 0; $batch = $partners->searchRead([], ['id', 'email', 'ref', 'active'], limit: 500, offset: $offset, order: 'id asc'); $offset += 500) {
+foreach (Odoo::partners()->withArchived()->lazy([], ['id', 'email', 'ref', 'active']) as $partner) {
     // ...
 }
 ```
@@ -200,7 +235,17 @@ $domain->toArray();
 // ['|', '&', '&', '&', '&', ['is_company', '=', true], ['country_id.code', '=', 'NL'], ['id', 'in', [1, 2, 3]], ['email', '!=', false], ['name', 'ilike', 'acme'], ['ref', '=', 'ACME']]
 ```
 
-Also available: `whereNotIn()`, `whereNull()`, `whereLike()`, `whereDomain()` and `orWhereDomain()` to nest a whole domain as one operand, and `Domain::fromArray()` to wrap raw terms.
+Closures nest a group as one operand, like Laravel's query builder:
+
+```php
+Domain::make()
+    ->where('is_company', true)
+    ->where(fn (Domain $d) => $d->where('country_id.code', 'NL')->orWhere('country_id.code', 'BE'))
+    ->whereNot(fn (Domain $d) => $d->whereNull('email'))
+    ->whereBetween('create_date', '2026-01-01', '2026-12-31');
+```
+
+Also available: `whereNotIn()`, `whereNull()`, `whereLike()`, `whereNotBetween()`, `whereChildOf()` and `whereParentOf()` for hierarchies, `whereDomain()` and `orWhereDomain()` to nest a whole domain as one operand, and `Domain::fromArray()` to wrap raw terms.
 
 ## The client
 
@@ -217,6 +262,10 @@ Odoo::enabled();            // config('odoo.enabled')
 
 Every request carries the bearer key, a `User-Agent`, and `X-Odoo-Database` when configured. Connection failures and 5xx responses without an Odoo error body (a 502/503 from the proxy) are retried (`odoo.retry`). Anything Odoo itself answered, including a 500 with an error name such as `builtins.ValueError`, is deterministic and never retried: every JSON-2 call is its own transaction and the same request will fail the same way.
 
+Every call is its own SQL transaction on the Odoo side: committed when the method returns, rolled back when it raises. There is no way to batch several calls into one transaction, so prefer a single call that does the whole job (`search_read` over `search` plus `read`, an `action_*` method, or a custom method in an Odoo module) when partial failure would leave inconsistent data.
+
+To log or inspect traffic, listen to Laravel's `Illuminate\Http\Client\Events\RequestSending` and `ResponseReceived` events; the package adds no logging of its own.
+
 ## Errors
 
 All exceptions extend `Marshmallow\Odoo\Exceptions\OdooException`. The subclass is picked from Odoo's error name first and the HTTP status second, and the full error body stays on the exception.
@@ -227,8 +276,8 @@ All exceptions extend `Marshmallow\Odoo\Exceptions\OdooException`. The subclass 
 | `AccessDeniedException` | The key's user lacks access rights (`odoo.exceptions.AccessError`, HTTP 403) |
 | `ValidationException` | Odoo rejected the values (`ValidationError`, `UserError`) |
 | `MissingRecordException` | The record does not exist (`MissingError`, or `find()` on an empty `read`; Odoo returns `[]` for unknown ids rather than an error) |
-| `InvalidRequestException` | The request is wrong: unknown model or method (`werkzeug.exceptions.NotFound`), invalid field or value in a domain (`builtins.ValueError` and friends) |
-| `ServerException` | Any other non-2xx response |
+| `InvalidRequestException` | The request is wrong: unknown model or method (`werkzeug.exceptions.NotFound`), invalid field or value in a domain (`builtins.ValueError` and friends), or any other 4xx |
+| `ServerException` | Any other 5xx response |
 | `ConnectionException` | The instance could not be reached within the timeout and retries |
 | `OdooDisabledException` | `ODOO_ENABLED=false` |
 | `InvalidConfigurationException` | `ODOO_URL` or `ODOO_API_KEY` is missing |
@@ -262,6 +311,9 @@ Full documentation lives in the published `config/odoo.php`.
 | `retry.times` | | `3` | Attempts for connection failures and 5xx responses without an Odoo error body. |
 | `retry.sleep` | | `250` | Milliseconds between attempts. |
 | `user_agent` | | `marshmallow/laravel-odoo` | `User-Agent` header. |
+| `context.lang` | `ODOO_LANG` | `null` | Default language for every call, e.g. `nl_NL`. |
+| `context.tz` | `ODOO_TIMEZONE` | `null` | Default timezone for every call. |
+| `context.company_id` | `ODOO_COMPANY_ID` | `null` | Default company for every call. |
 | `resources` | | `[]` | Custom resource classes, see Extending. |
 
 ## Artisan commands

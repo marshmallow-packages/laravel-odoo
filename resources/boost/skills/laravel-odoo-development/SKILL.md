@@ -58,13 +58,15 @@ Odoo::partners()->update($id, ['phone' => '...']);
 $partner = Odoo::partners()->find($id, ['name']);   // MissingRecordException when absent
 Odoo::invoices()->post($invoiceId);                  // action_post, a separate transaction from create()
 Odoo::model('crm.lead')->call('name_search', ['name' => 'acme']);
-Odoo::products()->withContext(['lang' => 'nl_NL'])->get($ids, ['name']);
+Odoo::products()->withLang('nl_NL')->get($ids, ['name']);                  // also withTimezone, withCompany, withArchived, withContext
+Odoo::partners()->lazy(Domain::make()->where('is_company', true), ['name']); // pages through everything; chunk() for callbacks
+Odoo::invoices()->readGroup([], ['partner_id'], ['amount_total:sum']);      // formatted_read_group
 Odoo::products()->update($id, ['taxes_id' => Commands::set([$taxId])]);   // x2many: Commands::create/update/delete/unlink/link/clear/set
 ```
 
 Accessors: `partners()` (res.partner), `products()` (product.product), `templates()` (product.template), `invoices()` (account.move), `taxes()` (account.tax), `modules()` (ir.module.module), `model('any.model')`, `api()` (raw client: `call`, `version`, `contextGet`).
 
-Resource methods: `find`, `get`, `exists`, `search`, `searchRead`, `first`, `searchCount`, `create`, `createMany`, `update`, `delete`, `fields`, `call`, `withContext`.
+Resource methods: `find`, `get`, `displayNames`, `exists`, `search`, `searchRead`, `collect`, `first`, `searchCount`, `chunk`, `lazy`, `readGroup`, `nameSearch`, `create`, `createMany`, `update`, `delete`, `archive`, `unarchive`, `hasAccess`, `fields`, `call`, `withContext`, `withLang`, `withTimezone`, `withCompany`, `withArchived`. Prefer `archive()` over `delete()` for records other systems reference. A default context comes from `ODOO_LANG`, `ODOO_TIMEZONE` and `ODOO_COMPANY_ID`.
 
 ### 4. Handle errors
 
