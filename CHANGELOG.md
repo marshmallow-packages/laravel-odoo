@@ -1,6 +1,6 @@
 # Release Notes
 
-## [Unreleased](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.1.0...HEAD)
+## [Unreleased](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.2.0...HEAD)
 
 ### Added
 
@@ -13,6 +13,21 @@
 ### Fixed
 
 - 4xx responses without a recognised Odoo error name (such as 422) now map to `InvalidRequestException` instead of `ServerException`.
+
+## [v0.2.0](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.1.0...v0.2.0) - 2026-09-28
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+### What's Changed
+
+#### Enhancements
+
+* feat(resources): paging, grouping, access checks and context defaults by @LTKort in https://github.com/marshmallow-packages/laravel-odoo/pull/1
+
+### New Contributors
+
+* @LTKort made their first contribution in https://github.com/marshmallow-packages/laravel-odoo/pull/1
+
+**Full Changelog**: https://github.com/marshmallow-packages/laravel-odoo/compare/v0.1.0...v0.2.0
 
 ## [v0.1.0](https://github.com/marshmallow-packages/laravel-odoo/releases/tag/v0.1.0) - 2026-09-28
 
