@@ -12,10 +12,10 @@ description: Orient in the marshmallow/laravel-odoo repo - what it is, how the p
 - **`src/`** - the package. `OdooServiceProvider` is the single wiring point (config merge, publish tag, container bindings, commands). `Odoo` is the manager behind the `Odoo` facade: `api()` returns the client, the resource accessors (`partners()`, `products()`, `invoices()`, ...) return `Resources\*` classes, `model('x.y')` returns a generic resource.
 - **`src/Client/`** - `OdooClient` (Laravel `Http` under the hood, so `Http::fake()` works) implements `Contracts\Client`. All JSON-2 traffic goes through `call(model, method, params, ids)`.
 - **`src/Exceptions/`** - `OdooException` base plus typed subclasses mapped from Odoo's error `name` and the HTTP status. Every exception keeps the original error payload.
-- **`src/Resources/`** - `Resource` base bound to an Odoo model name (find/get/search/searchRead/searchCount/create/update/delete/call) and thin per-model subclasses with model-specific helpers.
-- **`src/Support/Domain.php`** - fluent builder for Odoo search domains.
+- **`src/Resources/`** - `Resource` base bound to an Odoo model name (find/get/search/searchRead/chunk/lazy/readGroup/nameSearch/create/update/delete/archive/hasAccess/call plus context shortcuts) and thin per-model subclasses with model-specific helpers. Paging helpers order by id when no order is given.
+- **`src/Support/Domain.php`** - fluent builder for Odoo search domains, with closure nesting and `whereNot`.
 - **`src/Testing/`** - `Odoo::fake()` swaps the facade root with `OdooFake` (scripted responses + assertions).
-- **`config/odoo.php`** - publish tag `odoo-config`; env keys `ODOO_URL`, `ODOO_DATABASE`, `ODOO_API_KEY`, `ODOO_ENABLED`, `ODOO_TIMEOUT`.
+- **`config/odoo.php`** - publish tag `odoo-config`; env keys `ODOO_URL`, `ODOO_DATABASE`, `ODOO_API_KEY`, `ODOO_ENABLED`, `ODOO_TIMEOUT`, `ODOO_LANG`, `ODOO_TIMEZONE`, `ODOO_COMPANY_ID`. The client merges `odoo.context` under every call's context.
 - **`tests/`** - Pest on Orchestra Testbench. `TestCase` boots the provider; `ArchTest` enforces architectural rules; type coverage is gated at 100%. No test may hit a real Odoo instance.
 - **`workbench/`** - throwaway host app for `composer build` / `composer serve`. Never ship behavior that only works because of workbench wiring.
 - **`resources/boost/skills/laravel-odoo-development/SKILL.md`** - the Boost skill shipped to consumers. Regenerate with `package-generate-skill` whenever public APIs, config, commands, tags or README promises change.

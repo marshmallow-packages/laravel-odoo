@@ -68,3 +68,33 @@ it('wraps raw terms and reports emptiness', function () {
     expect(Domain::make()->isEmpty())->toBeTrue();
     expect(Domain::make()->where('a', 1)->isEmpty())->toBeFalse();
 });
+
+it('nests closures as and-ed and or-ed groups', function () {
+    $domain = Domain::make()
+        ->where('is_company', true)
+        ->where(fn (Domain $d) => $d->where('a', 1)->orWhere('b', 2))
+        ->orWhere(fn (Domain $d) => $d->where('c', 3)->where('d', 4));
+
+    expect($domain->toArray())->toBe([
+        '|', '&', ['is_company', '=', true], '|', ['a', '=', 1], ['b', '=', 2], '&', ['c', '=', 3], ['d', '=', 4],
+    ]);
+});
+
+it('negates a group', function () {
+    expect(Domain::make()->where('x', 1)->whereNot(fn (Domain $d) => $d->where('a', 1)->where('b', 2))->toArray())
+        ->toBe([['x', '=', 1], '!', '&', ['a', '=', 1], ['b', '=', 2]]);
+
+    expect(Domain::make()->whereNot([['a', '=', 1]])->toArray())->toBe(['!', ['a', '=', 1]]);
+    expect(Domain::make()->whereNot([])->toArray())->toBe([]);
+});
+
+it('builds between and hierarchy terms', function () {
+    expect(Domain::make()->whereBetween('date', '2026-01-01', '2026-01-31')->toArray())
+        ->toBe([['date', '>=', '2026-01-01'], ['date', '<=', '2026-01-31']]);
+
+    expect(Domain::make()->where('x', 1)->whereNotBetween('qty', 1, 9)->toArray())
+        ->toBe([['x', '=', 1], '|', ['qty', '<', 1], ['qty', '>', 9]]);
+
+    expect(Domain::make()->whereChildOf('parent_id', 5)->whereParentOf('id', [6, 7])->toArray())
+        ->toBe([['parent_id', 'child_of', [5]], ['id', 'parent_of', [6, 7]]]);
+});

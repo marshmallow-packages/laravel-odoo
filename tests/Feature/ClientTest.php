@@ -80,6 +80,7 @@ it('maps odoo errors onto typed exceptions', function (string $name, int $status
     'unknown model or method' => ['werkzeug.exceptions.NotFound', 404, InvalidRequestException::class],
     'invalid field in domain' => ['builtins.ValueError', 500, InvalidRequestException::class],
     'other' => ['odoo.exceptions.RedirectWarning', 500, ServerException::class],
+    'unknown 4xx name' => ['werkzeug.exceptions.UnprocessableEntity', 422, InvalidRequestException::class],
 ]);
 
 it('falls back to the http status when the error body is not json', function () {
@@ -105,8 +106,29 @@ it('maps bodiless responses to the right class', function (int $status, string $
     [401, AuthenticationException::class],
     [403, AccessDeniedException::class],
     [404, InvalidRequestException::class],
+    [422, InvalidRequestException::class],
     [500, ServerException::class],
 ]);
+
+it('merges the configured default context under the per-call context', function () {
+    config()->set('odoo.context', ['lang' => 'nl_NL', 'tz' => 'Europe/Amsterdam', 'company_id' => null]);
+    Http::fake(['odoo.test/*' => Http::response([])]);
+
+    app(Client::class)->call('res.partner', 'search', ['domain' => []]);
+    app(Client::class)->call('res.partner', 'search', ['domain' => [], 'context' => ['lang' => 'en_US']]);
+
+    Http::assertSent(fn (Request $request): bool => $request['context'] === ['lang' => 'nl_NL', 'tz' => 'Europe/Amsterdam']);
+    Http::assertSent(fn (Request $request): bool => $request['context'] === ['lang' => 'en_US', 'tz' => 'Europe/Amsterdam']);
+});
+
+it('sends no context when none is configured', function () {
+    config()->set('odoo.context', ['lang' => null, 'tz' => null, 'company_id' => null]);
+    Http::fake(['odoo.test/*' => Http::response([])]);
+
+    app(Client::class)->call('res.partner', 'search', ['domain' => []]);
+
+    Http::assertSent(fn (Request $request): bool => ! isset($request['context']));
+});
 
 it('retries connection failures and server errors but not client errors', function () {
     config()->set('odoo.retry.times', 3);

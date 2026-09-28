@@ -171,3 +171,122 @@ it('lists installed modules and checks one', function () {
         && $call->params['fields'] === ['name', 'shortdesc']);
     $fake->assertCalled('ir.module.module', 'search_count', fn (RecordedCall $call): bool => $call->params['domain'] === [['name', '=', 'sale'], ['state', '=', 'installed']]);
 });
+
+it('reads plain many2one ids when names are not loaded', function () {
+    $fake = Odoo::fake(['res.partner/read' => [['id' => 7, 'parent_id' => 3]]]);
+
+    expect(Odoo::partners()->find(7, ['parent_id'], loadNames: false))->toBe(['id' => 7, 'parent_id' => 3]);
+
+    $fake->assertCalled('res.partner', 'read', fn (RecordedCall $call): bool => $call->params === ['fields' => ['parent_id'], 'load' => null]);
+});
+
+it('maps display names by id', function () {
+    Odoo::fake(['res.partner/read' => [['id' => 1, 'display_name' => 'Acme'], ['id' => 2, 'display_name' => 'Globex']]]);
+
+    expect(Odoo::partners()->displayNames([1, 2]))->toBe([1 => 'Acme', 2 => 'Globex']);
+});
+
+it('collects search results', function () {
+    Odoo::fake(['res.partner/search_read' => [['id' => 1, 'name' => 'Acme']]]);
+
+    expect(Odoo::partners()->collect([], ['name'])->pluck('name')->all())->toBe(['Acme']);
+});
+
+it('chunks through all pages ordered by id', function () {
+    $fake = Odoo::fake(['res.partner/search_read' => fn (RecordedCall $call): array => match ($call->params['offset']) {
+        0 => [['id' => 1], ['id' => 2]],
+        2 => [['id' => 3]],
+        default => [],
+    }]);
+
+    $pages = [];
+    $done = Odoo::partners()->chunk(2, function (array $records, int $page) use (&$pages): void {
+        $pages[$page] = array_column($records, 'id');
+    });
+
+    expect($done)->toBeTrue();
+    expect($pages)->toBe([1 => [1, 2], 2 => [3]]);
+    $fake->assertCalledTimes('res.partner', 'search_read', 2);
+    $fake->assertCalled('res.partner', 'search_read', fn (RecordedCall $call): bool => $call->params['order'] === 'id asc' && $call->params['limit'] === 2);
+});
+
+it('stops chunking when the callback returns false', function () {
+    $fake = Odoo::fake(['res.partner/search_read' => [['id' => 1], ['id' => 2]]]);
+
+    expect(Odoo::partners()->chunk(2, fn (): bool => false))->toBeFalse();
+    $fake->assertCalledTimes('res.partner', 'search_read', 1);
+});
+
+it('rejects a chunk size below one', function () {
+    Odoo::fake();
+
+    Odoo::partners()->chunk(0, fn () => null);
+})->throws(InvalidArgumentException::class);
+
+it('iterates lazily over all matching records', function () {
+    $fake = Odoo::fake(['res.partner/search_read' => fn (RecordedCall $call): array => $call->params['offset'] === 0
+        ? [['id' => 1], ['id' => 2]]
+        : [['id' => 3]]]);
+
+    $ids = Odoo::partners()->lazy(Domain::make()->where('is_company', true), ['name'], chunkSize: 2)->pluck('id')->all();
+
+    expect($ids)->toBe([1, 2, 3]);
+    $fake->assertCalledTimes('res.partner', 'search_read', 2);
+});
+
+it('groups and aggregates with formatted_read_group', function () {
+    $fake = Odoo::fake(['account.move/formatted_read_group' => [['partner_id' => [1, 'Acme'], 'amount_total:sum' => 10.0, '__count' => 2]]]);
+
+    $groups = Odoo::invoices()->readGroup(Domain::make()->where('state', 'posted'), ['partner_id'], ['amount_total:sum', '__count'], limit: 5);
+
+    expect($groups[0]['__count'])->toBe(2);
+    $fake->assertCalled('account.move', 'formatted_read_group', fn (RecordedCall $call): bool => $call->params === [
+        'domain' => [['state', '=', 'posted']],
+        'groupby' => ['partner_id'],
+        'aggregates' => ['amount_total:sum', '__count'],
+        'having' => [],
+        'offset' => 0,
+        'limit' => 5,
+    ]);
+});
+
+it('searches by name and keys the result by id', function () {
+    $fake = Odoo::fake(['res.partner/name_search' => [[1, 'Acme'], [2, 'Acme BV']]]);
+
+    expect(Odoo::partners()->nameSearch('acme', limit: 5))->toBe([1 => 'Acme', 2 => 'Acme BV']);
+    $fake->assertCalled('res.partner', 'name_search', fn (RecordedCall $call): bool => $call->params === ['name' => 'acme', 'domain' => [], 'operator' => 'ilike', 'limit' => 5]);
+});
+
+it('checks access rights on the model and on records', function () {
+    $fake = Odoo::fake(['account.move/has_access' => true]);
+
+    expect(Odoo::invoices()->hasAccess('write'))->toBeTrue();
+    expect(Odoo::invoices()->hasAccess('unlink', [4]))->toBeTrue();
+
+    $fake->assertCalled('account.move', 'has_access', fn (RecordedCall $call): bool => $call->params === ['operation' => 'write'] && $call->ids === []);
+    $fake->assertCalled('account.move', 'has_access', fn (RecordedCall $call): bool => $call->ids === [4]);
+});
+
+it('archives and unarchives records', function () {
+    $fake = Odoo::fake(['res.partner/action_archive' => true, 'res.partner/action_unarchive' => true]);
+
+    expect(Odoo::partners()->archive(3))->toBeTrue();
+    expect(Odoo::partners()->unarchive([3, 4]))->toBeTrue();
+
+    $fake->assertCalled('res.partner', 'action_archive', fn (RecordedCall $call): bool => $call->ids === [3]);
+    $fake->assertCalled('res.partner', 'action_unarchive', fn (RecordedCall $call): bool => $call->ids === [3, 4]);
+});
+
+it('offers context shortcuts', function () {
+    $fake = Odoo::fake(['res.partner/search_count' => 1]);
+
+    Odoo::partners()->withLang('nl_NL')->withTimezone('Europe/Amsterdam')->withCompany([2, 3])->withArchived()->searchCount();
+
+    $fake->assertCalled('res.partner', 'search_count', fn (RecordedCall $call): bool => $call->params['context'] === [
+        'lang' => 'nl_NL',
+        'tz' => 'Europe/Amsterdam',
+        'company_id' => 2,
+        'allowed_company_ids' => [2, 3],
+        'active_test' => false,
+    ]);
+});

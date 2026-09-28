@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Marshmallow\Odoo\Support;
 
+use Closure;
 use Illuminate\Contracts\Support\Arrayable;
 
 /**
@@ -40,10 +41,17 @@ final class Domain implements Arrayable
     }
 
     /**
-     * Add a term. With two arguments the operator defaults to "=".
+     * Add a term. With two arguments the operator defaults to "=". A closure
+     * receives a fresh Domain and nests it as one AND operand.
+     *
+     * @param  string|Closure(Domain): void  $field
      */
-    public function where(string $field, mixed $operator, mixed $value = null): self
+    public function where(string|Closure $field, mixed $operator = null, mixed $value = null): self
     {
+        if ($field instanceof Closure) {
+            return $this->whereDomain($this->nested($field));
+        }
+
         [$operator, $value] = $this->normalize($operator, $value, func_num_args() === 2);
 
         $this->terms[] = [$field, $operator, $value];
@@ -52,13 +60,75 @@ final class Domain implements Arrayable
     }
 
     /**
-     * Combine everything before with the new term using OR.
+     * Combine everything before with the new term using OR. A closure
+     * receives a fresh Domain and nests it as one OR operand.
+     *
+     * @param  string|Closure(Domain): void  $field
      */
-    public function orWhere(string $field, mixed $operator, mixed $value = null): self
+    public function orWhere(string|Closure $field, mixed $operator = null, mixed $value = null): self
     {
+        if ($field instanceof Closure) {
+            return $this->orWhereDomain($this->nested($field));
+        }
+
         [$operator, $value] = $this->normalize($operator, $value, func_num_args() === 2);
 
         return $this->or([$field, $operator, $value]);
+    }
+
+    /**
+     * Negate a domain (or raw terms) as one operand.
+     *
+     * @param  Domain|array<int, mixed>|Closure(Domain): void  $domain
+     */
+    public function whereNot(Domain|array|Closure $domain): self
+    {
+        $terms = $domain instanceof Closure ? $this->nested($domain)->toArray() : ($domain instanceof Domain ? $domain->toArray() : array_values($domain));
+
+        if ($terms === []) {
+            return $this;
+        }
+
+        $this->terms[] = '!';
+        array_push($this->terms, ...self::group($terms));
+
+        return $this;
+    }
+
+    /**
+     * $min <= field <= $max.
+     */
+    public function whereBetween(string $field, mixed $min, mixed $max): self
+    {
+        return $this->where($field, '>=', $min)->where($field, '<=', $max);
+    }
+
+    /**
+     * field < $min or field > $max.
+     */
+    public function whereNotBetween(string $field, mixed $min, mixed $max): self
+    {
+        return $this->whereDomain(['|', [$field, '<', $min], [$field, '>', $max]]);
+    }
+
+    /**
+     * Records below the given record(s) in a hierarchy (child_of), including themselves.
+     *
+     * @param  int|array<int, int>  $ids
+     */
+    public function whereChildOf(string $field, int|array $ids): self
+    {
+        return $this->where($field, 'child_of', array_values((array) $ids));
+    }
+
+    /**
+     * Records above the given record(s) in a hierarchy (parent_of), including themselves.
+     *
+     * @param  int|array<int, int>  $ids
+     */
+    public function whereParentOf(string $field, int|array $ids): self
+    {
+        return $this->where($field, 'parent_of', array_values((array) $ids));
     }
 
     /**
@@ -205,6 +275,17 @@ final class Domain implements Arrayable
         }
 
         return $count;
+    }
+
+    /**
+     * @param  Closure(Domain): void  $callback
+     */
+    private function nested(Closure $callback): self
+    {
+        $domain = new self;
+        $callback($domain);
+
+        return $domain;
     }
 
     /**

@@ -88,6 +88,7 @@ class OdooException extends RuntimeException
             $status === 401 => AuthenticationException::class,
             $status === 403 => AccessDeniedException::class,
             $status === 404 => InvalidRequestException::class,
+            $status >= 400 && $status < 500 => InvalidRequestException::class,
             default => ServerException::class,
         };
     }
