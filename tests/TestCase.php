@@ -15,4 +15,11 @@ abstract class TestCase extends Orchestra
             OdooServiceProvider::class,
         ];
     }
+
+    protected function defineEnvironment($app): void
+    {
+        $app['config']->set('odoo.url', 'https://odoo.test');
+        $app['config']->set('odoo.api_key', 'test-key');
+        $app['config']->set('odoo.retry.sleep', 0);
+    }
 }

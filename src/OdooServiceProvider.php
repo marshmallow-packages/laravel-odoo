@@ -4,8 +4,15 @@ declare(strict_types=1);
 
 namespace Marshmallow\Odoo;
 
+use Illuminate\Contracts\Config\Repository;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Support\ServiceProvider;
-use Marshmallow\Odoo\Console\Commands\OdooCommand;
+use Marshmallow\Odoo\Client\OdooClient;
+use Marshmallow\Odoo\Console\Commands\DoctorCommand;
+use Marshmallow\Odoo\Console\Commands\ModulesCommand;
+use Marshmallow\Odoo\Console\Commands\PingCommand;
+use Marshmallow\Odoo\Contracts\Client;
 
 class OdooServiceProvider extends ServiceProvider
 {
@@ -14,9 +21,21 @@ class OdooServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/laravel-odoo.php', 'laravel-odoo');
+        $this->mergeConfigFrom(__DIR__.'/../config/odoo.php', 'odoo');
 
-        $this->app->singleton(Odoo::class);
+        $this->app->singleton(Client::class, function (Application $app): Client {
+            /** @var array<string, mixed> $config */
+            $config = $app->make(Repository::class)->get('odoo', []);
+
+            return new OdooClient($app->make(Factory::class), $config);
+        });
+
+        $this->app->singleton(Odoo::class, function (Application $app): Odoo {
+            /** @var array<string, class-string<Resources\Resource>> $resources */
+            $resources = $app->make(Repository::class)->get('odoo.resources', []);
+
+            return new Odoo($app->make(Client::class), $resources);
+        });
     }
 
     /**
@@ -29,11 +48,13 @@ class OdooServiceProvider extends ServiceProvider
         }
 
         $this->publishes([
-            __DIR__.'/../config/laravel-odoo.php' => config_path('laravel-odoo.php'),
-        ], ['laravel-odoo', 'laravel-odoo-config']);
+            __DIR__.'/../config/odoo.php' => config_path('odoo.php'),
+        ], ['odoo', 'odoo-config']);
 
         $this->commands([
-            OdooCommand::class,
+            PingCommand::class,
+            ModulesCommand::class,
+            DoctorCommand::class,
         ]);
     }
 }
