@@ -1,10 +1,17 @@
 # Release Notes
 
-## [Unreleased](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.2.0...HEAD)
+## [Unreleased](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.2.1...HEAD)
+
+## [v0.2.1](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.2.0...v0.2.1) - 2026-09-28
 
 ### Fixed
 
 - `ODOO_COMPANY_ID` also fills `allowed_company_ids`, which is where Odoo reads the active company from on multi-company databases.
+- Type coverage runs without the plugin cache, which removes the ParseError flake on prefer-lowest CI jobs.
+
+### Changed
+
+- CI runs only for pushes to `main` and PRs into `main`, with a single required `ci` check. `main` is protected; the changelog is written in the release PR.
 
 ## [v0.2.0](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.1.0...v0.2.0) - 2026-09-28
 
