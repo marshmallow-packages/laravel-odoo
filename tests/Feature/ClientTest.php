@@ -32,6 +32,15 @@ it('posts named params and ids to the json-2 endpoint with the expected headers'
         && $request->data() === ['fields' => ['name'], 'ids' => [7]]);
 });
 
+it('sends exactly one content-type and accept header', function () {
+    Http::fake(['odoo.test/json/2/res.company/read' => Http::response([['id' => 1]])]);
+
+    app(Client::class)->call('res.company', 'read', ['fields' => ['display_name']], [1]);
+
+    Http::assertSent(fn (Request $request): bool => $request->header('Content-Type') === ['application/json; charset=utf-8']
+        && $request->header('Accept') === ['application/json']);
+});
+
 it('sends an empty json object when there are no params', function () {
     Http::fake(['odoo.test/json/2/res.users/context_get' => Http::response(['uid' => 2])]);
 
