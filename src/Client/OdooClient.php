@@ -123,8 +123,9 @@ class OdooClient implements Client
         $request = $this->http
             ->baseUrl($url)
             ->acceptJson()
-            ->asJson()
-            ->withHeader('Content-Type', 'application/json; charset=utf-8')
+            // Set Content-Type once: asJson() plus a second header sends both values, which Odoo 20 rejects with 415.
+            ->bodyFormat('json')
+            ->contentType('application/json; charset=utf-8')
             ->withToken($apiKey, 'bearer')
             ->withUserAgent((string) ($this->config['user_agent'] ?? 'marshmallow/laravel-odoo'))
             ->timeout((int) ($this->config['timeout'] ?? 30))

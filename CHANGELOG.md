@@ -1,6 +1,12 @@
 # Release Notes
 
-## [Unreleased](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.2.1...HEAD)
+## [Unreleased](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.2.2...HEAD)
+
+## [v0.2.2](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.2.1...v0.2.2) - 2026-11-18
+
+### Fixed
+
+- Requests send a single `Content-Type: application/json; charset=utf-8` header. The client sent the value twice, which Odoo 20 rejects with HTTP 415 on every `/json/2` call.
 
 ## [v0.2.1](https://github.com/marshmallow-packages/laravel-odoo/compare/v0.2.0...v0.2.1) - 2026-09-28
 
